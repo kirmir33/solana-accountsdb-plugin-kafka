@@ -19,14 +19,15 @@ use {
 };
 
 pub struct Filter {
-    program_ignores: HashSet<[u8; 32]>,
+    program_includes: HashSet<[u8; 32]>,
 }
+
 
 impl Filter {
     pub fn new(config: &Config) -> Self {
         Self {
-            program_ignores: config
-                .program_ignores
+            program_includes: config
+                .program_includes
                 .iter()
                 .flat_map(|p| Pubkey::from_str(p).ok().map(|p| p.to_bytes()))
                 .collect(),
@@ -36,9 +37,9 @@ impl Filter {
     pub fn wants_account_key(&self, account_key: &[u8]) -> bool {
         let key = match <&[u8; 32]>::try_from(account_key) {
             Ok(key) => key,
-            _ => return true,
+            _ => return false,  // return false when conversion fails
         };
-        !self.program_ignores.contains(key)
+        self.program_includes.contains(key)
     }
 }
 
@@ -49,7 +50,7 @@ mod tests {
     #[test]
     fn test_filter() {
         let config = Config {
-            program_ignores: vec![
+            program_includes: vec![
                 "Sysvar1111111111111111111111111111111111111".to_owned(),
                 "Vote111111111111111111111111111111111111111".to_owned(),
             ],
@@ -57,15 +58,15 @@ mod tests {
         };
 
         let filter = Filter::new(&config);
-        assert_eq!(filter.program_ignores.len(), 2);
+        assert_eq!(filter.program_includes.len(), 2);
 
         assert!(filter.wants_account_key(
-            &Pubkey::from_str("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin")
+            &Pubkey::from_str("Vote111111111111111111111111111111111111111")
                 .unwrap()
                 .to_bytes()
         ));
         assert!(!filter.wants_account_key(
-            &Pubkey::from_str("Vote111111111111111111111111111111111111111")
+            &Pubkey::from_str("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin")
                 .unwrap()
                 .to_bytes()
         ));
