@@ -8,6 +8,22 @@ use {
     serde_json::to_vec,
     std::time::Duration,
 };
+use serde::Serialize;
+
+
+#[derive(Serialize)]
+pub struct UpdateAccountEvent {
+    pub slot: u64,
+    pub pubkey: Vec<u8>,
+    pub lamports: u64,
+    pub owner: Vec<u8>,
+    pub executable: bool,
+    pub rent_epoch: u64,
+    pub data: Vec<u8>,
+    pub write_version: u64,
+    pub txn_signature: Option<Vec<u8>>,
+}
+
 
 pub struct Publisher {
     producer: Producer,
