@@ -14,7 +14,6 @@
 
 use crate::message_wrapper::EventMessage;
 use crate::message_wrapper::EventMessage::{Account, Slot, Transaction};
-use serde_json::json;
 use {
     crate::*,
     prost::Message,
@@ -50,17 +49,15 @@ impl Publisher {
 
     pub fn update_account(&self, ev: UpdateAccountEvent) -> Result<(), KafkaError> {
         let temp_key;
-        let (key, payload) = if self.wrap_messages {
+        let (key, buf) = if self.wrap_messages {
             temp_key = self.copy_and_prepend(ev.pubkey.as_slice(), 65u8);
-            let wrapped = MessageWrapper { event_message: Some(Account(Box::new(ev))) };
-            (&temp_key, json!(wrapped).to_string()) // <- Change this line
+            (&temp_key, Self::encode_with_wrapper(Account(Box::new(ev))))
         } else {
-            let json_payload = json!(ev).to_string(); // <- Change this line
-            (&ev.pubkey, json_payload)
+            (&ev.pubkey, ev.encode_to_vec())
         };
         let record = BaseRecord::<Vec<u8>, _>::to(&self.update_account_topic)
             .key(key)
-            .payload(payload);
+            .payload(&buf);
         self.producer.send(record).map(|_| ()).map_err(|(e, _)| e)
     }
 
